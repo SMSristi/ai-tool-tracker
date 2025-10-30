@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// removed unused Select imports after switching to numeric Input for proficiency
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -51,6 +51,7 @@ const Index = () => {
   const [newTool, setNewTool] = useState({
     name: "",
     description: "",
+    category: "",
     proficiency: "3",
   });
 
@@ -74,7 +75,7 @@ const Index = () => {
         };
         setTools([...tools, tool]);
       }
-      setNewTool({ name: "", description: "", proficiency: "3" });
+      setNewTool({ name: "", description: "", category: "", proficiency: "3" });
       setIsDialogOpen(false);
     }
   };
@@ -84,6 +85,7 @@ const Index = () => {
     setNewTool({
       name: tool.name,
       description: tool.description,
+      category: "",
       proficiency: tool.proficiency.toString(),
     });
     setIsDialogOpen(true);
@@ -96,7 +98,7 @@ const Index = () => {
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingTool(null);
-    setNewTool({ name: "", description: "", proficiency: "3" });
+    setNewTool({ name: "", description: "", category: "", proficiency: "3" });
   };
 
   const getProficiencyColor = (level: number) => {
@@ -172,22 +174,24 @@ const Index = () => {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="proficiency">Proficiency Level</Label>
-                    <Select
+                    <Label htmlFor="category">Category</Label>
+                    <Input
+                      id="category"
+                      placeholder="e.g., IDE, Chatbot, Testing, Deployment"
+                      value={newTool.category}
+                      onChange={(e) => setNewTool({ ...newTool, category: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="proficiency">Proficiency</Label>
+                    <Input
+                      id="proficiency"
+                      type="number"
+                      min={1}
+                      max={5}
                       value={newTool.proficiency}
-                      onValueChange={(value) => setNewTool({ ...newTool, proficiency: value })}
-                    >
-                      <SelectTrigger id="proficiency">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 - Beginner</SelectItem>
-                        <SelectItem value="2">2 - Basic</SelectItem>
-                        <SelectItem value="3">3 - Intermediate</SelectItem>
-                        <SelectItem value="4">4 - Advanced</SelectItem>
-                        <SelectItem value="5">5 - Expert</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      onChange={(e) => setNewTool({ ...newTool, proficiency: e.target.value })}
+                    />
                   </div>
                 </div>
                 <DialogFooter>
