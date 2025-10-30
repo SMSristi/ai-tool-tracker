@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, TrendingUp } from "lucide-react";
+import { Plus, TrendingUp, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,7 @@ const Index = () => {
   ]);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingTool, setEditingTool] = useState<Tool | null>(null);
   const [newTool, setNewTool] = useState({
     name: "",
     description: "",
@@ -40,16 +41,47 @@ const Index = () => {
 
   const handleAddTool = () => {
     if (newTool.name.trim() && newTool.description.trim()) {
-      const tool: Tool = {
-        id: Date.now().toString(),
-        name: newTool.name,
-        description: newTool.description,
-        proficiency: parseInt(newTool.proficiency),
-      };
-      setTools([...tools, tool]);
+      if (editingTool) {
+        // Update existing tool
+        setTools(tools.map(tool => 
+          tool.id === editingTool.id 
+            ? { ...tool, name: newTool.name, description: newTool.description, proficiency: parseInt(newTool.proficiency) }
+            : tool
+        ));
+        setEditingTool(null);
+      } else {
+        // Add new tool
+        const tool: Tool = {
+          id: Date.now().toString(),
+          name: newTool.name,
+          description: newTool.description,
+          proficiency: parseInt(newTool.proficiency),
+        };
+        setTools([...tools, tool]);
+      }
       setNewTool({ name: "", description: "", proficiency: "3" });
       setIsDialogOpen(false);
     }
+  };
+
+  const handleEditTool = (tool: Tool) => {
+    setEditingTool(tool);
+    setNewTool({
+      name: tool.name,
+      description: tool.description,
+      proficiency: tool.proficiency.toString(),
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDeleteTool = (id: string) => {
+    setTools(tools.filter(tool => tool.id !== id));
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingTool(null);
+    setNewTool({ name: "", description: "", proficiency: "3" });
   };
 
   const getProficiencyColor = (level: number) => {
@@ -84,9 +116,9 @@ const Index = () => {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                  <DialogTitle>Add New Tool</DialogTitle>
+                  <DialogTitle>{editingTool ? "Edit Tool" : "Add New Tool"}</DialogTitle>
                   <DialogDescription>
-                    Add a new AI development tool to your tracker
+                    {editingTool ? "Update your AI development tool" : "Add a new AI development tool to your tracker"}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -129,10 +161,10 @@ const Index = () => {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  <Button variant="outline" onClick={handleCloseDialog}>
                     Cancel
                   </Button>
-                  <Button onClick={handleAddTool}>Add Tool</Button>
+                  <Button onClick={handleAddTool}>{editingTool ? "Update Tool" : "Add Tool"}</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -157,6 +189,7 @@ const Index = () => {
                       <TableHead className="w-[250px]">Name</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead className="w-[140px] text-center">Proficiency</TableHead>
+                      <TableHead className="w-[120px] text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -172,6 +205,24 @@ const Index = () => {
                           >
                             {tool.proficiency}/5
                           </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditTool(tool)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteTool(tool.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
