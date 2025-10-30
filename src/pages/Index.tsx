@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, TrendingUp, Pencil, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, TrendingUp, Pencil, Trash2, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ interface Tool {
 }
 
 const Index = () => {
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [tools, setTools] = useState<Tool[]>([
     {
       id: "1",
@@ -33,6 +34,20 @@ const Index = () => {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTool, setEditingTool] = useState<Tool | null>(null);
+
+  useEffect(() => {
+    // Apply theme to document root
+    const root = document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
+  };
   const [newTool, setNewTool] = useState({
     name: "",
     description: "",
@@ -109,7 +124,20 @@ const Index = () => {
                 Track and manage your AI development tools
               </p>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={toggleTheme}
+                className="rounded-full"
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-5 w-5" />
+                ) : (
+                  <Moon className="h-5 w-5" />
+                )}
+              </Button>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="lg" className="shadow-lg">
                   <Plus className="mr-2 h-5 w-5" />
@@ -170,6 +198,7 @@ const Index = () => {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </header>
 
