@@ -98,12 +98,14 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <header className="mb-8">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <header className="mb-12">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold tracking-tight text-foreground">AI Tools Tracker</h1>
-              <p className="mt-2 text-lg text-muted-foreground">
+              <h1 className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-5xl font-bold tracking-tight text-transparent">
+                AI Tools Tracker
+              </h1>
+              <p className="mt-3 text-lg text-muted-foreground">
                 Track and manage your AI development tools
               </p>
             </div>
@@ -171,8 +173,8 @@ const Index = () => {
           </div>
         </header>
 
-        <div className="rounded-lg border bg-card shadow-sm">
-          <div className="p-6">
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+          <div className="p-8">
             <div className="mb-4 flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary" />
               <h2 className="text-xl font-semibold text-card-foreground">Your Tools</h2>
