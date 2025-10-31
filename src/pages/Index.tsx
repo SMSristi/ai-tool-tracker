@@ -34,35 +34,34 @@ const Index = () => {
     }
   }, [theme]);
 
+  const fetchTools = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await (supabase as any)
+        .from("tools")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching tools:", error);
+      } else {
+        const mappedTools: Tool[] = (data || []).map((tool: any) => ({
+          id: tool.id,
+          name: tool.name,
+          description: tool.description,
+          proficiency: tool.proficiency,
+        }));
+        setTools(mappedTools);
+      }
+    } catch (error) {
+      console.error("Error fetching tools:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     // Fetch tools from Supabase when component mounts
-    const fetchTools = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await (supabase as any)
-          .from("tools")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (error) {
-          console.error("Error fetching tools:", error);
-        } else {
-          // Map Supabase data to Tool interface
-          const mappedTools: Tool[] = (data || []).map((tool: any) => ({
-            id: tool.id,
-            name: tool.name,
-            description: tool.description,
-            proficiency: tool.proficiency,
-          }));
-          setTools(mappedTools);
-        }
-      } catch (error) {
-        console.error("Error fetching tools:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchTools();
   }, []);
 
@@ -79,80 +78,36 @@ const Index = () => {
   const handleAddTool = async () => {
     if (newTool.name.trim() && newTool.description.trim()) {
       try {
-        if (editingTool) {
-          // Update existing tool in Supabase
-          const { error } = await (supabase as any)
-            .from("tools")
-            .update({
+        // Add new tool to Supabase
+        const { error } = await (supabase as any)
+          .from("tools")
+          .insert([
+            {
               name: newTool.name,
               description: newTool.description,
               proficiency: parseInt(newTool.proficiency),
-            })
-            .eq("id", editingTool.id);
+            },
+          ]);
 
-          if (error) {
-            console.error("Error updating tool:", error);
-            return;
-          }
-
-          // Update local state
-          setTools(
-            tools.map((tool) =>
-              tool.id === editingTool.id
-                ? {
-                    ...tool,
-                    name: newTool.name,
-                    description: newTool.description,
-                    proficiency: parseInt(newTool.proficiency),
-                  }
-                : tool
-            )
-          );
-          setEditingTool(null);
-        } else {
-          // Add new tool to Supabase
-          const { data, error } = await (supabase as any)
-            .from("tools")
-            .insert([
-              {
-                name: newTool.name,
-                description: newTool.description,
-                proficiency: parseInt(newTool.proficiency),
-              },
-            ])
-            .select()
-            .single();
-
-          if (error) {
-            console.error("Error adding tool:", error);
-            return;
-          }
-
-          // Update local state with the new tool from Supabase
-          if (data) {
-            const newToolData: Tool = {
-              id: data.id,
-              name: data.name,
-              description: data.description,
-              proficiency: data.proficiency,
-            };
-            setTools([...tools, newToolData]);
-          }
-
-          // Send POST request with newTool to the webhook
-          try {
-            fetch("https://smsristi.app.n8n.cloud/webhook-test/abf7ecc1-5253-441c-aa28-7d2e4183707d", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(newTool),
-            });
-          } catch (error) {
-            // Optionally handle error
-            console.error("Failed to send POST request:", error);
-          }
+        if (error) {
+          console.error("Error adding tool:", error);
+          return;
         }
+
+        // Optional webhook
+        try {
+          fetch("https://smsristi.app.n8n.cloud/webhook-test/abf7ecc1-5253-441c-aa28-7d2e4183707d", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newTool),
+          });
+        } catch (error) {
+          console.error("Failed to send POST request:", error);
+        }
+
+        await fetchTools();
         setNewTool({ name: "", description: "", category: "", proficiency: "3" });
         setIsDialogOpen(false);
       } catch (error) {
@@ -161,7 +116,7 @@ const Index = () => {
     }
   };
 
-  const handleEditTool = (tool: Tool) => {
+  const startEditingTool = (tool: Tool) => {
     setEditingTool(tool);
     setNewTool({
       name: tool.name,
@@ -170,6 +125,32 @@ const Index = () => {
       proficiency: tool.proficiency.toString(),
     });
     setIsDialogOpen(true);
+  };
+
+  const handleEditTool = async () => {
+    if (!editingTool) return;
+    try {
+      const { error } = await (supabase as any)
+        .from("tools")
+        .update({
+          name: newTool.name,
+          description: newTool.description,
+          proficiency: parseInt(newTool.proficiency),
+        })
+        .eq("id", editingTool.id);
+
+      if (error) {
+        console.error("Error updating tool:", error);
+        return;
+      }
+
+      await fetchTools();
+      setEditingTool(null);
+      setNewTool({ name: "", description: "", category: "", proficiency: "3" });
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Error in handleEditTool:", error);
+    }
   };
 
   const handleDeleteTool = async (id: string) => {
@@ -184,8 +165,7 @@ const Index = () => {
         return;
       }
 
-      // Update local state
-      setTools(tools.filter((tool) => tool.id !== id));
+      await fetchTools();
     } catch (error) {
       console.error("Error in handleDeleteTool:", error);
     }
@@ -294,7 +274,7 @@ const Index = () => {
                   <Button variant="outline" onClick={handleCloseDialog}>
                     Cancel
                   </Button>
-                  <Button onClick={handleAddTool}>{editingTool ? "Update Tool" : "Add Tool"}</Button>
+                  <Button onClick={editingTool ? handleEditTool : handleAddTool}>{editingTool ? "Update Tool" : "Add Tool"}</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -346,7 +326,7 @@ const Index = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleEditTool(tool)}
+                              onClick={() => startEditingTool(tool)}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
