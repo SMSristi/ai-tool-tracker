@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 // removed unused Select imports after switching to numeric Input for proficiency
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Tool {
   id: string;
@@ -17,20 +18,8 @@ interface Tool {
 
 const Index = () => {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
-  const [tools, setTools] = useState<Tool[]>([
-    {
-      id: "1",
-      name: "ChatGPT",
-      description: "Advanced conversational AI for natural language processing and content generation",
-      proficiency: 4,
-    },
-    {
-      id: "2",
-      name: "GitHub Copilot",
-      description: "AI pair programmer that helps write code faster with intelligent suggestions",
-      proficiency: 5,
-    },
-  ]);
+  const [tools, setTools] = useState<Tool[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTool, setEditingTool] = useState<Tool | null>(null);
@@ -45,6 +34,38 @@ const Index = () => {
     }
   }, [theme]);
 
+  useEffect(() => {
+    // Fetch tools from Supabase when component mounts
+    const fetchTools = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await (supabase as any)
+          .from("tools")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching tools:", error);
+        } else {
+          // Map Supabase data to Tool interface
+          const mappedTools: Tool[] = (data || []).map((tool: any) => ({
+            id: tool.id,
+            name: tool.name,
+            description: tool.description,
+            proficiency: tool.proficiency,
+          }));
+          setTools(mappedTools);
+        }
+      } catch (error) {
+        console.error("Error fetching tools:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTools();
+  }, []);
+
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
@@ -55,28 +76,88 @@ const Index = () => {
     proficiency: "3",
   });
 
-  const handleAddTool = () => {
+  const handleAddTool = async () => {
     if (newTool.name.trim() && newTool.description.trim()) {
-      if (editingTool) {
-        // Update existing tool
-        setTools(tools.map(tool => 
-          tool.id === editingTool.id 
-            ? { ...tool, name: newTool.name, description: newTool.description, proficiency: parseInt(newTool.proficiency) }
-            : tool
-        ));
-        setEditingTool(null);
-      } else {
-        // Add new tool
-        const tool: Tool = {
-          id: Date.now().toString(),
-          name: newTool.name,
-          description: newTool.description,
-          proficiency: parseInt(newTool.proficiency),
-        };
-        setTools([...tools, tool]);
+      try {
+        if (editingTool) {
+          // Update existing tool in Supabase
+          const { error } = await (supabase as any)
+            .from("tools")
+            .update({
+              name: newTool.name,
+              description: newTool.description,
+              proficiency: parseInt(newTool.proficiency),
+            })
+            .eq("id", editingTool.id);
+
+          if (error) {
+            console.error("Error updating tool:", error);
+            return;
+          }
+
+          // Update local state
+          setTools(
+            tools.map((tool) =>
+              tool.id === editingTool.id
+                ? {
+                    ...tool,
+                    name: newTool.name,
+                    description: newTool.description,
+                    proficiency: parseInt(newTool.proficiency),
+                  }
+                : tool
+            )
+          );
+          setEditingTool(null);
+        } else {
+          // Add new tool to Supabase
+          const { data, error } = await (supabase as any)
+            .from("tools")
+            .insert([
+              {
+                name: newTool.name,
+                description: newTool.description,
+                proficiency: parseInt(newTool.proficiency),
+              },
+            ])
+            .select()
+            .single();
+
+          if (error) {
+            console.error("Error adding tool:", error);
+            return;
+          }
+
+          // Update local state with the new tool from Supabase
+          if (data) {
+            const newToolData: Tool = {
+              id: data.id,
+              name: data.name,
+              description: data.description,
+              proficiency: data.proficiency,
+            };
+            setTools([...tools, newToolData]);
+          }
+
+          // Send POST request with newTool to the webhook
+          try {
+            fetch("https://smsristi.app.n8n.cloud/webhook-test/abf7ecc1-5253-441c-aa28-7d2e4183707d", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(newTool),
+            });
+          } catch (error) {
+            // Optionally handle error
+            console.error("Failed to send POST request:", error);
+          }
+        }
+        setNewTool({ name: "", description: "", category: "", proficiency: "3" });
+        setIsDialogOpen(false);
+      } catch (error) {
+        console.error("Error in handleAddTool:", error);
       }
-      setNewTool({ name: "", description: "", category: "", proficiency: "3" });
-      setIsDialogOpen(false);
     }
   };
 
@@ -91,8 +172,23 @@ const Index = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDeleteTool = (id: string) => {
-    setTools(tools.filter(tool => tool.id !== id));
+  const handleDeleteTool = async (id: string) => {
+    try {
+      const { error } = await (supabase as any)
+        .from("tools")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error("Error deleting tool:", error);
+        return;
+      }
+
+      // Update local state
+      setTools(tools.filter((tool) => tool.id !== id));
+    } catch (error) {
+      console.error("Error in handleDeleteTool:", error);
+    }
   };
 
   const handleCloseDialog = () => {
@@ -212,7 +308,11 @@ const Index = () => {
               <TrendingUp className="h-5 w-5 text-primary" />
               <h2 className="text-xl font-semibold text-card-foreground">Your Tools</h2>
             </div>
-            {tools.length === 0 ? (
+            {loading ? (
+              <div className="py-12 text-center">
+                <p className="text-muted-foreground">Loading tools...</p>
+              </div>
+            ) : tools.length === 0 ? (
               <div className="py-12 text-center">
                 <p className="text-muted-foreground">No tools added yet. Click "Add Tool" to get started!</p>
               </div>
