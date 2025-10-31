@@ -89,22 +89,19 @@ const Index = () => {
             },
           ]);
 
-        if (error) {
+        if (!error) {
+          try {
+            await fetch("https://smsristi.app.n8n.cloud/webhook/abf7ecc1-5253-441c-aa28-7d2e4183707d", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(newTool),
+            });
+          } catch (webhookError) {
+            console.error("Webhook call failed:", webhookError);
+          }
+        } else {
           console.error("Error adding tool:", error);
           return;
-        }
-
-        // Optional webhook
-        try {
-          fetch("https://smsristi.app.n8n.cloud/webhook-test/abf7ecc1-5253-441c-aa28-7d2e4183707d", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(newTool),
-          });
-        } catch (error) {
-          console.error("Failed to send POST request:", error);
         }
 
         await fetchTools();
