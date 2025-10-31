@@ -85,6 +85,7 @@ const Index = () => {
             {
               name: newTool.name,
               description: newTool.description,
+              category: newTool.category,
               proficiency: parseInt(newTool.proficiency),
             },
           ]);
